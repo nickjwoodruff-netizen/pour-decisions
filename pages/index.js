@@ -166,18 +166,37 @@ const inp = (extra = {}) => ({
 function PhotoUploadButton({ onPhoto, label = "📷 Upload photo", loading = false }) {
   const fileInputRef = useRef(null);
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        const MAX = 1024;
+        let { width, height } = img;
+        if (width > height && width > MAX) { height = (height * MAX) / width; width = MAX; }
+        else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
+      };
+      img.onerror = () => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve({ base64: e.target.result.split(",")[1], mediaType: "image/jpeg" });
+        reader.readAsDataURL(file);
+      };
+      img.src = url;
+    });
+  };
+
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result?.split(",")[1];
-      if (base64) {
-        onPhoto(base64);
-      }
-    };
-    reader.readAsDataURL(file);
+    const { base64, mediaType } = await compressImage(file);
+    if (base64) onPhoto(base64, mediaType);
   };
 
   return (
@@ -221,27 +240,27 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
     { v: false, l: "🥤 Non-alcoholic" },
   ];
 
-  const handlePhotoAnalysis = async (base64) => {
+  const handlePhotoAnalysis = async (base64, mediaType = "image/jpeg") => {
     try {
       const res = await fetch("/api/analyze-people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const err = await res.json();
-        alert("Photo analysis failed: " + (err.error || "Unknown error"));
+        alert("Photo analysis failed: " + (data.error || "Unknown error"));
         return;
       }
 
-      const data = await res.json();
       if (data.description) {
         onPhotoAnalyzed(data.description);
       }
     } catch (err) {
       console.error("Photo analysis error:", err);
-      alert("Failed to analyze photo");
+      alert("Photo error: " + err.message);
     }
   };
 
@@ -405,18 +424,18 @@ function MenuStep({ onNext }) {
   const [url, setUrl] = useState("");
   const [analyzingMenu, setAnalyzingMenu] = useState(false);
 
-  const handleMenuPhoto = async (base64) => {
+  const handleMenuPhoto = async (base64, mediaType = "image/jpeg") => {
     setAnalyzingMenu(true);
     try {
       const res = await fetch("/api/analyze-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        alert("Menu analysis failed: " + (err.error || "Unknown error"));
+        const data = await res.json();
+        alert("Menu analysis failed: " + (data.error || "Unknown error"));
         setAnalyzingMenu(false);
         return;
       }
