@@ -235,12 +235,15 @@ function PhotoUploadButton({ onPhoto, label = "📷 Upload photo", loading = fal
 // ─── Person Card ──────────────────────────────────────────────
 
 function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, onPhotoAnalyzed, analyzingPhoto }) {
+  const [analyzing, setAnalyzing] = useState(false);
+
   const alcOpts = [
     { v: true, l: "🍺 Alcoholic" },
     { v: false, l: "🥤 Non-alcoholic" },
   ];
 
   const handlePhotoAnalysis = async (base64, mediaType = "image/jpeg") => {
+    setAnalyzing(true);
     try {
       const res = await fetch("/api/analyze-people", {
         method: "POST",
@@ -261,6 +264,8 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
     } catch (err) {
       console.error("Photo analysis error:", err);
       alert("Photo error: " + err.message);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -319,15 +324,42 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
         })}
       />
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <PhotoUploadButton
-          onPhoto={handlePhotoAnalysis}
-          label="📷 Add photo"
-          loading={analyzingPhoto}
-        />
-      </div>
+      {analyzing ? (
+        <div
+          style={{
+            background: `rgba(${hexRgb(C.cyan)},0.07)`,
+            border: `1.5px dashed ${C.cyan}`,
+            borderRadius: 12,
+            padding: "18px 14px",
+            textAlign: "center",
+          }}
+        >
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          <div style={{ fontSize: 28, marginBottom: 8, display: "inline-block", animation: "spin 1.2s linear infinite" }}>📷</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>
+            Reading the vibe...
+          </div>
+          <div style={{ fontSize: 11, color: C.dim, fontFamily: body }}>Usually 5–10 seconds</div>
+          <div style={{ marginTop: 10, height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              background: `linear-gradient(90deg,${C.cyan},${C.purple})`,
+              borderRadius: 2,
+              animation: "bar 8s ease-out forwards",
+            }} />
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8 }}>
+          <PhotoUploadButton
+            onPhoto={handlePhotoAnalysis}
+            label={p.photoAnalysis ? "📷 Retake photo" : "📷 Add photo"}
+            loading={false}
+          />
+        </div>
+      )}
 
-      {p.photoAnalysis && (
+      {!analyzing && p.photoAnalysis && (
         <div
           style={{
             background: `rgba(${hexRgb(C.cyan)},0.1)`,
