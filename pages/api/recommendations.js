@@ -89,6 +89,7 @@ Respond with ONLY a valid JSON array — no markdown, no extra text:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-opus-4-6",
