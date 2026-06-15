@@ -256,7 +256,7 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
       }
 
       if (data.description) {
-        onPhotoAnalyzed(data.description);
+        onPhotoAnalyzed(data.description, base64);
       }
     } catch (err) {
       console.error("Photo analysis error:", err);
@@ -338,10 +338,29 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
             color: C.muted,
             fontFamily: body,
             lineHeight: 1.5,
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-start",
           }}
         >
-          <div style={{ fontSize: 10, color: C.cyan, fontWeight: 700, marginBottom: 6 }}>FROM PHOTO</div>
-          {p.photoAnalysis}
+          {p.photoPreview && (
+            <img
+              src={`data:image/jpeg;base64,${p.photoPreview}`}
+              alt="person"
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 10,
+                objectFit: "cover",
+                flexShrink: 0,
+                border: `1.5px solid rgba(${hexRgb(C.cyan)},0.4)`,
+              }}
+            />
+          )}
+          <div>
+            <div style={{ fontSize: 10, color: C.cyan, fontWeight: 700, marginBottom: 4 }}>FROM PHOTO</div>
+            {p.photoAnalysis}
+          </div>
         </div>
       )}
 
@@ -587,6 +606,7 @@ const newPerson = (id) => ({
   name: "",
   description: "",
   photoAnalysis: "",
+  photoPreview: "",   // base64 jpeg for display in results
   alcoholic: true,
   cantDrink: "",
   lastDrink: "",
@@ -630,7 +650,10 @@ function PeopleStep({ onNext, onBack }) {
             showLastDrink={avoidMode === "individual"}
             onChange={(field, val) => update(p.id, field, val)}
             onRemove={() => setPeople((prev) => prev.filter((pp) => pp.id !== p.id))}
-            onPhotoAnalyzed={(desc) => update(p.id, "photoAnalysis", desc)}
+            onPhotoAnalyzed={(desc, preview) => {
+                update(p.id, "photoAnalysis", desc);
+                if (preview) update(p.id, "photoPreview", preview);
+              }}
             analyzingPhoto={analyzingIndex === p.id}
           />
         ))}
@@ -926,18 +949,38 @@ function ResultsStep({ results, loading, error, onRestart }) {
                 {`@keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }`}
               </style>
 
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 32, lineHeight: 1 }}>{r.drinkEmoji || "🍹"}</span>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    lineHeight: 1.2,
-                    fontFamily: display,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {headline}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                {r.photoPreview ? (
+                  <img
+                    src={`data:image/jpeg;base64,${r.photoPreview}`}
+                    alt={r.personName || "person"}
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 14,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                      border: `2px solid rgba(${hexRgb(a)},0.5)`,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>{r.drinkEmoji || "🍹"}</span>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 17,
+                      fontWeight: 700,
+                      lineHeight: 1.3,
+                      fontFamily: display,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {headline}
+                  </div>
+                  {r.photoPreview && (
+                    <span style={{ fontSize: 22, lineHeight: 1 }}>{r.drinkEmoji || "🍹"}</span>
+                  )}
                 </div>
               </div>
 
@@ -1032,7 +1075,12 @@ export default function PourDecisions() {
         throw new Error(data.error || "Failed to generate recommendations");
       }
 
-      setResults(data.results);
+      // Merge photo previews from people into results (AI can't return photos)
+      const enriched = data.results.map((r, i) => {
+        const person = peopleData?.people?.[i];
+        return { ...r, photoPreview: person?.photoPreview || "" };
+      });
+      setResults(enriched);
     } catch (err) {
       console.error("Error:", err);
       setError(err.message || "Something went wrong. Please try again.");
