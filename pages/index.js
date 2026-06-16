@@ -645,16 +645,112 @@ const newPerson = (id) => ({
   avoidLast: false,
 });
 
+// ─── Group Photo Uploader ─────────────────────────────────────
+
+function GroupPhotoUploader({ onGroupAnalyzed }) {
+  const fileInputRef = useRef(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      const MAX = 1024;
+      let { width, height } = img;
+      if (width > height && width > MAX) { height = (height * MAX) / width; width = MAX; }
+      else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      const r = new FileReader();
+      r.onload = (e) => resolve({ base64: e.target.result.split(",")[1], mediaType: "image/jpeg" });
+      r.readAsDataURL(file);
+    };
+    img.src = url;
+  });
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAnalyzing(true);
+    try {
+      const { base64, mediaType } = await compressImage(file);
+      const res = await fetch("/api/analyze-group", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert("Group photo failed: " + (data.error || "Unknown")); return; }
+      onGroupAnalyzed(data.people, base64);
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  if (analyzing) return (
+    <div style={{
+      background: `rgba(${hexRgb(C.purple)},0.07)`,
+      border: `1.5px dashed ${C.purple}`,
+      borderRadius: 14, padding: "24px 16px", textAlign: "center",
+    }}>
+      <style>{`@keyframes spin2 { from { transform:rotate(0deg) } to { transform:rotate(360deg) } } @keyframes bar { 0%{width:0%} 60%{width:70%} 100%{width:88%} }`}</style>
+      <div style={{ fontSize: 36, marginBottom: 10, display: "inline-block", animation: "spin2 1.2s linear infinite" }}>👥</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: C.purple, fontFamily: sans, marginBottom: 4 }}>Spotting the crew...</div>
+      <div style={{ fontSize: 12, color: C.dim, fontFamily: body, marginBottom: 12 }}>Usually 5–10 seconds</div>
+      <div style={{ height: 3, background: `rgba(${hexRgb(C.purple)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
+        <div style={{ height: "100%", background: `linear-gradient(90deg,${C.purple},${C.accent})`, borderRadius: 2, animation: "bar 8s ease-out forwards" }} />
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+      <button onClick={() => fileInputRef.current?.click()} style={{
+        width: "100%", padding: "18px 16px", borderRadius: 14,
+        border: `1.5px dashed ${C.purple}`,
+        background: `rgba(${hexRgb(C.purple)},0.07)`,
+        color: C.purple, fontFamily: sans, fontWeight: 600, fontSize: 15,
+        cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+      }}>
+        <div style={{ fontSize: 28, marginBottom: 6 }}>👥</div>
+        <div>Upload group photo</div>
+        <div style={{ fontSize: 12, color: C.dim, marginTop: 4, fontWeight: 400 }}>We'll detect everyone automatically</div>
+      </button>
+    </>
+  );
+}
+
 function PeopleStep({ onNext, onBack }) {
   const [people, setPeople] = useState([newPerson(1)]);
   const [tone, setTone] = useState("witty");
   const [avoidMode, setAvoidMode] = useState("no");
-  const [analyzingIndex, setAnalyzingIndex] = useState(null);
+  const [groupPhotoPreview, setGroupPhotoPreview] = useState(null);
+  const [inputMode, setInputMode] = useState("manual");
 
   const update = (id, field, value) =>
     setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
 
   const canNext = people.some((p) => p.name || p.description || p.photoAnalysis);
+
+  const handleGroupAnalyzed = (detectedPeople, base64) => {
+    setGroupPhotoPreview(base64);
+    const newPeople = detectedPeople.map((dp, i) => ({
+      ...newPerson(Date.now() + i),
+      name: dp.funName,
+      photoAnalysis: dp.vibe,
+      photoPreview: base64,
+    }));
+    setPeople(newPeople);
+    setInputMode("manual");
+  };
 
   const tones = [
     { id: "witty", l: "😏 Witty", d: "Clever & charming" },
@@ -668,45 +764,68 @@ function PeopleStep({ onNext, onBack }) {
       <h2 style={{ fontSize: 32, fontWeight: 700, margin: "20px 0 6px", fontFamily: display, letterSpacing: "-0.02em" }}>
         Who's drinking? 🥳
       </h2>
-      <p style={{ color: C.muted, margin: "0 0 24px", fontSize: 15, fontFamily: body }}>
+      <p style={{ color: C.muted, margin: "0 0 20px", fontSize: 15, fontFamily: body }}>
         Tell the bartender about each person.
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {people.map((p, i) => (
-          <PersonCard
-            key={p.id}
-            p={p}
-            index={i}
-            showRemove={people.length > 1}
-            showLastDrink={avoidMode === "individual"}
-            onChange={(field, val) => update(p.id, field, val)}
-            onRemove={() => setPeople((prev) => prev.filter((pp) => pp.id !== p.id))}
-            onPhotoAnalyzed={(desc, preview) => {
+      <Tabs
+        opts={[{ v: "manual", l: "👤 Add people" }, { v: "group", l: "👥 Group photo" }]}
+        val={inputMode}
+        onChange={setInputMode}
+        accent={C.purple}
+      />
+
+      {inputMode === "group" && (
+        <GroupPhotoUploader onGroupAnalyzed={handleGroupAnalyzed} />
+      )}
+
+      {inputMode === "manual" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {groupPhotoPreview && (
+            <div style={{
+              background: `rgba(${hexRgb(C.purple)},0.08)`,
+              border: `1px solid rgba(${hexRgb(C.purple)},0.3)`,
+              borderRadius: 12, padding: "10px 14px",
+              display: "flex", alignItems: "center", gap: 10,
+            }}>
+              <img src={`data:image/jpeg;base64,${groupPhotoPreview}`} alt="group"
+                style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.purple, fontFamily: sans }}>✅ Group photo scanned</div>
+                <div style={{ fontSize: 11, color: C.dim, fontFamily: body }}>{people.length} people detected — vibes revealed at results</div>
+              </div>
+            </div>
+          )}
+
+          {people.map((p, i) => (
+            <PersonCard
+              key={p.id}
+              p={p}
+              index={i}
+              showRemove={people.length > 1}
+              showLastDrink={avoidMode === "individual"}
+              onChange={(field, val) => update(p.id, field, val)}
+              onRemove={() => setPeople((prev) => prev.filter((pp) => pp.id !== p.id))}
+              onPhotoAnalyzed={(desc, preview) => {
                 update(p.id, "photoAnalysis", desc);
                 if (preview) update(p.id, "photoPreview", preview);
               }}
-            analyzingPhoto={analyzingIndex === p.id}
-          />
-        ))}
-        <button
-          onClick={() => setPeople((prev) => [...prev, newPerson(Date.now())])}
-          style={{
-            background: "transparent",
-            border: `1.5px dashed ${C.dim}`,
-            borderRadius: 12,
-            padding: 14,
-            color: C.muted,
-            fontFamily: sans,
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: 500,
-            transition: "all 0.2s",
-          }}
-        >
-          + Add person
-        </button>
-      </div>
+              analyzingPhoto={false}
+              fromGroupPhoto={!!groupPhotoPreview}
+            />
+          ))}
+          <button
+            onClick={() => setPeople((prev) => [...prev, newPerson(Date.now())])}
+            style={{
+              background: "transparent", border: `1.5px dashed ${C.dim}`,
+              borderRadius: 12, padding: 14, color: C.muted, fontFamily: sans,
+              cursor: "pointer", fontSize: 14, fontWeight: 500, transition: "all 0.2s",
+            }}
+          >
+            + Add person
+          </button>
+        </div>
+      )}
 
       <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
         <Lbl>Avoid their last drink?</Lbl>
@@ -716,23 +835,13 @@ function PeopleStep({ onNext, onBack }) {
             { v: "everyone", l: "🚫 Yes, everyone" },
             { v: "individual", l: "👤 Per person" },
           ].map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setAvoidMode(o.v)}
-              style={{
-                flex: 1,
-                padding: "10px 4px",
-                borderRadius: 10,
-                fontSize: 12,
-                border: `1.5px solid ${avoidMode === o.v ? C.gold : C.border}`,
-                background: avoidMode === o.v ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
-                color: avoidMode === o.v ? "#fff" : C.muted,
-                fontFamily: sans,
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
+            <button key={o.v} onClick={() => setAvoidMode(o.v)} style={{
+              flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12,
+              border: `1.5px solid ${avoidMode === o.v ? C.gold : C.border}`,
+              background: avoidMode === o.v ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
+              color: avoidMode === o.v ? "#fff" : C.muted,
+              fontFamily: sans, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+            }}>
               {o.l}
             </button>
           ))}
@@ -743,23 +852,14 @@ function PeopleStep({ onNext, onBack }) {
         <Lbl>Bartender vibe</Lbl>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {tones.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTone(t.id)}
-              style={{
-                padding: 14,
-                borderRadius: 12,
-                border: `1.5px solid ${tone === t.id ? C.accent : C.border}`,
-                background: tone === t.id ? `rgba(${hexRgb(C.accent)},0.12)` : "transparent",
-                color: tone === t.id ? "#fff" : C.muted,
-                fontFamily: sans,
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.2s",
-              }}
-            >
+            <button key={t.id} onClick={() => setTone(t.id)} style={{
+              padding: 14, borderRadius: 12,
+              border: `1.5px solid ${tone === t.id ? C.accent : C.border}`,
+              background: tone === t.id ? `rgba(${hexRgb(C.accent)},0.12)` : "transparent",
+              color: tone === t.id ? "#fff" : C.muted,
+              fontFamily: sans, fontWeight: 600, fontSize: 14,
+              cursor: "pointer", textAlign: "left", transition: "all 0.2s",
+            }}>
               <div>{t.l}</div>
               <div style={{ fontSize: 11, fontWeight: 400, color: C.dim, marginTop: 4 }}>{t.d}</div>
             </button>
@@ -768,17 +868,12 @@ function PeopleStep({ onNext, onBack }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
-        <Btn variant="secondary" onClick={onBack}>
-          ← Back
-        </Btn>
-        <Btn disabled={!canNext} onClick={() => onNext({ people, tone, avoidMode })}>
-          Next →
-        </Btn>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn disabled={!canNext} onClick={() => onNext({ people, tone, avoidMode })}>Next →</Btn>
       </div>
     </div>
   );
 }
-
 // ─── Step 3: Vibe ─────────────────────────────────────────────
 
 function VibeStep({ onNext, onBack }) {
