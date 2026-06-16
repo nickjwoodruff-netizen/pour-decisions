@@ -555,57 +555,64 @@ function MenuStep({ onNext }) {
               lineHeight: 1.6,
             }}
           />
-          <PhotoUploadButton
-            onPhoto={handleMenuPhoto}
-            label="📸 Scan menu photo"
-            loading={analyzingMenu}
-          />
+          {analyzingMenu ? (
+            <div style={{
+              background: `rgba(${hexRgb(C.cyan)},0.07)`,
+              border: `1.5px dashed ${C.cyan}`,
+              borderRadius: 12, padding: "18px 14px", textAlign: "center",
+            }}>
+              <style>{`@keyframes spinMenu { from{transform:rotate(0deg)} to{transform:rotate(360deg)} } @keyframes barMenu { 0%{width:0%} 60%{width:72%} 100%{width:90%} }`}</style>
+              <div style={{ fontSize: 28, marginBottom: 8, display: "inline-block", animation: "spinMenu 1.2s linear infinite" }}>🍹</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>Reading the menu...</div>
+              <div style={{ fontSize: 11, color: C.dim, fontFamily: body, marginBottom: 10 }}>Usually 5–10 seconds</div>
+              <div style={{ height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: "100%", background: `linear-gradient(90deg,${C.cyan},${C.gold})`, borderRadius: 2, animation: "barMenu 8s ease-out forwards" }} />
+              </div>
+            </div>
+          ) : (
+            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📸 Scan menu photo" loading={false} />
+          )}
         </div>
       )}
 
       {mode === "photo" && (
-        <div
-          style={{
+        analyzingMenu ? (
+          <div style={{
+            background: `rgba(${hexRgb(C.cyan)},0.07)`,
+            border: `1.5px dashed ${C.cyan}`,
+            borderRadius: 14, padding: "28px 16px", textAlign: "center",
+          }}>
+            <style>{`@keyframes spinMenu { from{transform:rotate(0deg)} to{transform:rotate(360deg)} } @keyframes barMenu { 0%{width:0%} 60%{width:72%} 100%{width:90%} }`}</style>
+            <div style={{ fontSize: 36, marginBottom: 10, display: "inline-block", animation: "spinMenu 1.2s linear infinite" }}>🍹</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>Reading the menu...</div>
+            <div style={{ fontSize: 12, color: C.dim, fontFamily: body, marginBottom: 12 }}>Usually 5–10 seconds</div>
+            <div style={{ height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", background: `linear-gradient(90deg,${C.cyan},${C.gold})`, borderRadius: 2, animation: "barMenu 8s ease-out forwards" }} />
+            </div>
+          </div>
+        ) : (
+          <div style={{
             background: C.bgSoft,
             border: `2px dashed ${C.cyan}`,
-            borderRadius: 14,
-            padding: 32,
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            alignItems: "center",
-          }}
-        >
-          <div style={{ fontSize: 40 }}>📸</div>
-          <PhotoUploadButton
-            onPhoto={handleMenuPhoto}
-            label="📷 Choose menu photo"
-            loading={analyzingMenu}
-          />
-          <p style={{ color: C.dim, fontSize: 12, margin: 0, fontFamily: body }}>
-            Takes 5-10 seconds to analyze
-          </p>
-          {text && (
-            <div
-              style={{
+            borderRadius: 14, padding: 32, textAlign: "center",
+            display: "flex", flexDirection: "column", gap: 16, alignItems: "center",
+          }}>
+            <div style={{ fontSize: 40 }}>📸</div>
+            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📷 Choose menu photo" loading={false} />
+            <p style={{ color: C.dim, fontSize: 12, margin: 0, fontFamily: body }}>Takes 5–10 seconds to analyze</p>
+            {text && (
+              <div style={{
                 background: `rgba(${hexRgb(C.cyan)},0.1)`,
                 border: `1px solid rgba(${hexRgb(C.cyan)},0.3)`,
-                borderRadius: 10,
-                padding: 12,
-                width: "100%",
-                fontSize: 12,
-                color: C.text,
-                fontFamily: body,
-                textAlign: "left",
-                maxHeight: 120,
-                overflowY: "auto",
-              }}
-            >
-              {text}
-            </div>
-          )}
-        </div>
+                borderRadius: 10, padding: 12, width: "100%",
+                fontSize: 12, color: C.text, fontFamily: body,
+                textAlign: "left", maxHeight: 120, overflowY: "auto",
+              }}>
+                {text}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {mode === "url" && (
