@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 if (typeof document !== "undefined" && !document.getElementById("pd-fonts")) {
   const l = document.createElement("link");
@@ -312,18 +312,6 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
         style={inp()}
       />
 
-      <textarea
-        value={p.description}
-        onChange={(e) => onChange("description", e.target.value)}
-        placeholder="What are they like? Personality, vibe, style..."
-        style={inp({
-          resize: "none",
-          minHeight: 70,
-          lineHeight: 1.5,
-          fontFamily: body,
-        })}
-      />
-
       {analyzing ? (
         <div
           style={{
@@ -469,11 +457,33 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
 
 // ─── Step 1: Menu ─────────────────────────────────────────────
 
-function MenuStep({ onNext }) {
-  const [mode, setMode] = useState("type");
+function MenuStep({ onNext, onBack }) {
+  const [mode, setMode] = useState("photo");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [analyzingMenu, setAnalyzingMenu] = useState(false);
+
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url2 = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url2);
+      const canvas = document.createElement("canvas");
+      const MAX = 1024;
+      let { width, height } = img;
+      if (width > height && width > MAX) { height = (height * MAX) / width; width = MAX; }
+      else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      const r = new FileReader();
+      r.onload = (e) => resolve({ base64: e.target.result.split(",")[1], mediaType: "image/jpeg" });
+      r.readAsDataURL(file);
+    };
+    img.src = url2;
+  });
 
   const handleMenuPhoto = async (base64, mediaType = "image/jpeg") => {
     setAnalyzingMenu(true);
@@ -483,135 +493,74 @@ function MenuStep({ onNext }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: base64, mediaType }),
       });
-
       if (!res.ok) {
         const data = await res.json();
         alert("Menu analysis failed: " + (data.error || "Unknown error"));
-        setAnalyzingMenu(false);
         return;
       }
-
       const data = await res.json();
       setText(data.menu);
-      setMode("type");
     } catch (err) {
-      console.error("Menu photo error:", err);
       alert("Failed to analyze menu photo");
     } finally {
       setAnalyzingMenu(false);
     }
   };
 
-  const ok = mode === "type" ? !!text.trim() : !!url.trim();
+  const ok = mode === "photo" ? !!text.trim() : !!url.trim();
+
+  const AnalyzingUI = () => (
+    <div style={{
+      background: `rgba(${hexRgb(C.cyan)},0.07)`,
+      border: `1.5px dashed ${C.cyan}`,
+      borderRadius: 14, padding: "28px 16px", textAlign: "center",
+    }}>
+      <style>{`@keyframes spinMenu{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes barMenu{0%{width:0%}60%{width:72%}100%{width:90%}}`}</style>
+      <div style={{ fontSize: 36, marginBottom: 10, display: "inline-block", animation: "spinMenu 1.2s linear infinite" }}>🍹</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>Reading the menu...</div>
+      <div style={{ fontSize: 12, color: C.dim, fontFamily: body, marginBottom: 12 }}>Usually 5–10 seconds</div>
+      <div style={{ height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
+        <div style={{ height: "100%", background: `linear-gradient(90deg,${C.cyan},${C.gold})`, borderRadius: 2, animation: "barMenu 8s ease-out forwards" }} />
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: "8px 20px 36px" }}>
-      <h2
-        style={{
-          fontSize: 32,
-          fontWeight: 700,
-          margin: "20px 0 6px",
-          fontFamily: display,
-          letterSpacing: "-0.02em",
-        }}
-      >
+      <h2 style={{ fontSize: 32, fontWeight: 700, margin: "20px 0 6px", fontFamily: display, letterSpacing: "-0.02em" }}>
         What's on the menu? 🍹
       </h2>
       <p style={{ color: C.muted, margin: "0 0 28px", fontSize: 15, fontFamily: body }}>
         Tell us what drinks are available.
       </p>
 
-      <Tabs
-        opts={[
-          { v: "type", l: "✍️ Type it" },
-          { v: "photo", l: "📸 Photo" },
-          { v: "url", l: "🔗 Link" },
-        ]}
-        val={mode}
-        onChange={setMode}
-      />
-
-      {mode === "type" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={
-              "What's available?\n\nGin & Tonic, Mojito, House Red, Aperol Spritz, Espresso Martini, Old Fashioned..."
-            }
-            style={{
-              width: "100%",
-              minHeight: 160,
-              background: C.bgSoft,
-              border: `1px solid ${C.border}`,
-              borderRadius: 14,
-              padding: 16,
-              color: "#fff",
-              fontFamily: body,
-              fontSize: 15,
-              resize: "none",
-              outline: "none",
-              boxSizing: "border-box",
-              lineHeight: 1.6,
-            }}
-          />
-          {analyzingMenu ? (
-            <div style={{
-              background: `rgba(${hexRgb(C.cyan)},0.07)`,
-              border: `1.5px dashed ${C.cyan}`,
-              borderRadius: 12, padding: "18px 14px", textAlign: "center",
-            }}>
-              <style>{`@keyframes spinMenu { from{transform:rotate(0deg)} to{transform:rotate(360deg)} } @keyframes barMenu { 0%{width:0%} 60%{width:72%} 100%{width:90%} }`}</style>
-              <div style={{ fontSize: 28, marginBottom: 8, display: "inline-block", animation: "spinMenu 1.2s linear infinite" }}>🍹</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>Reading the menu...</div>
-              <div style={{ fontSize: 11, color: C.dim, fontFamily: body, marginBottom: 10 }}>Usually 5–10 seconds</div>
-              <div style={{ height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ height: "100%", background: `linear-gradient(90deg,${C.cyan},${C.gold})`, borderRadius: 2, animation: "barMenu 8s ease-out forwards" }} />
-              </div>
-            </div>
-          ) : (
-            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📸 Scan menu photo" loading={false} />
-          )}
-        </div>
-      )}
+      <Tabs opts={[{ v: "photo", l: "📸 Photo" }, { v: "url", l: "🔗 Link" }]} val={mode} onChange={setMode} />
 
       {mode === "photo" && (
-        analyzingMenu ? (
-          <div style={{
-            background: `rgba(${hexRgb(C.cyan)},0.07)`,
-            border: `1.5px dashed ${C.cyan}`,
-            borderRadius: 14, padding: "28px 16px", textAlign: "center",
-          }}>
-            <style>{`@keyframes spinMenu { from{transform:rotate(0deg)} to{transform:rotate(360deg)} } @keyframes barMenu { 0%{width:0%} 60%{width:72%} 100%{width:90%} }`}</style>
-            <div style={{ fontSize: 36, marginBottom: 10, display: "inline-block", animation: "spinMenu 1.2s linear infinite" }}>🍹</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.cyan, fontFamily: sans, marginBottom: 4 }}>Reading the menu...</div>
-            <div style={{ fontSize: 12, color: C.dim, fontFamily: body, marginBottom: 12 }}>Usually 5–10 seconds</div>
-            <div style={{ height: 3, background: `rgba(${hexRgb(C.cyan)},0.15)`, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", background: `linear-gradient(90deg,${C.cyan},${C.gold})`, borderRadius: 2, animation: "barMenu 8s ease-out forwards" }} />
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            background: C.bgSoft,
-            border: `2px dashed ${C.cyan}`,
-            borderRadius: 14, padding: 32, textAlign: "center",
-            display: "flex", flexDirection: "column", gap: 16, alignItems: "center",
-          }}>
-            <div style={{ fontSize: 40 }}>📸</div>
-            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📷 Choose menu photo" loading={false} />
-            <p style={{ color: C.dim, fontSize: 12, margin: 0, fontFamily: body }}>Takes 5–10 seconds to analyze</p>
-            {text && (
+        analyzingMenu ? <AnalyzingUI /> : (
+          text ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{
-                background: `rgba(${hexRgb(C.cyan)},0.1)`,
+                background: `rgba(${hexRgb(C.cyan)},0.08)`,
                 border: `1px solid rgba(${hexRgb(C.cyan)},0.3)`,
-                borderRadius: 10, padding: 12, width: "100%",
-                fontSize: 12, color: C.text, fontFamily: body,
-                textAlign: "left", maxHeight: 120, overflowY: "auto",
+                borderRadius: 12, padding: 14,
               }}>
-                {text}
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.cyan, fontFamily: sans, marginBottom: 8, letterSpacing: "0.1em" }}>✅ MENU SCANNED</div>
+                <div style={{ fontSize: 13, color: C.text, fontFamily: body, lineHeight: 1.6, maxHeight: 140, overflowY: "auto" }}>{text}</div>
               </div>
-            )}
-          </div>
+              <PhotoUploadButton onPhoto={handleMenuPhoto} label="📸 Rescan menu" loading={false} />
+            </div>
+          ) : (
+            <div style={{
+              border: `2px dashed ${C.cyan}`, borderRadius: 14, padding: "36px 20px",
+              textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center",
+            }}>
+              <div style={{ fontSize: 44 }}>📸</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", fontFamily: sans }}>Take a photo of the menu</div>
+              <div style={{ fontSize: 13, color: C.dim, fontFamily: body }}>We'll read it automatically</div>
+              <PhotoUploadButton onPhoto={handleMenuPhoto} label="📷 Choose photo" loading={false} />
+            </div>
+          )
         )
       )}
 
@@ -624,15 +573,14 @@ function MenuStep({ onNext }) {
             style={inp({ borderRadius: 50, padding: "14px 20px" })}
           />
           <p style={{ color: C.dim, fontSize: 12, margin: "10px 0 0", fontFamily: body }}>
-            We'll search for this venue's drinks menu.
+            We'll find the drinks menu from this link.
           </p>
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 32 }}>
-        <Btn disabled={!ok} onClick={() => onNext({ mode, text, url })}>
-          Next →
-        </Btn>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn disabled={!ok} onClick={() => onNext({ mode, text, url })}>Next →</Btn>
       </div>
     </div>
   );
@@ -1177,10 +1125,77 @@ function ResultsStep({ results, loading, error, onRestart }) {
   );
 }
 
+// ─── Splash Screen ────────────────────────────────────────────
+
+function SplashScreen({ onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2600); return () => clearTimeout(t); }, []);
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      background: C.bg, textAlign: "center", padding: 40,
+    }}>
+      <style>{`
+        @keyframes popIn { 0%{opacity:0;transform:scale(0.5) translateY(20px)} 60%{transform:scale(1.15) translateY(-4px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+      `}</style>
+      <div style={{ fontSize: 72, animation: "popIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both" }}>🍹</div>
+      <div style={{
+        fontSize: 42, fontWeight: 800, fontFamily: display, letterSpacing: "-0.03em",
+        background: `linear-gradient(135deg,${C.accent} 0%,${C.gold} 50%,${C.cyan} 100%)`,
+        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        margin: "16px 0 8px",
+        animation: "fadeUp 0.6s ease-out 0.5s both",
+      }}>Pour Decisions</div>
+
+    </div>
+  );
+}
+
+// ─── Intro Screen ─────────────────────────────────────────────
+
+function IntroScreen({ onStart }) {
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      justifyContent: "center", background: C.bg, padding: "40px 32px",
+    }}>
+      <style>{`@keyframes fadeUp2{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div style={{ fontSize: 44, marginBottom: 32, animation: "fadeUp2 0.5s ease-out 0.1s both" }}>🍹</div>
+      <p style={{
+        fontSize: 26, fontWeight: 700, fontFamily: display, lineHeight: 1.35,
+        color: "#fff", margin: "0 0 20px",
+        animation: "fadeUp2 0.5s ease-out 0.2s both",
+      }}>
+        Sometimes choosing a drink is hard.
+      </p>
+      <p style={{
+        fontSize: 26, fontWeight: 700, fontFamily: display, lineHeight: 1.35,
+        color: "#fff", margin: "0 0 32px",
+        animation: "fadeUp2 0.5s ease-out 0.3s both",
+      }}>
+        That's where Pour Decisions comes in.
+      </p>
+      <p style={{
+        fontSize: 16, color: C.muted, fontFamily: body, lineHeight: 1.7,
+        margin: "0 0 56px",
+        animation: "fadeUp2 0.5s ease-out 0.45s both",
+      }}>
+        We'll ask for a photo of your group and the drinks menu, then pair their vibe with their perfect drink.
+      </p>
+      <div style={{ animation: "fadeUp2 0.5s ease-out 0.6s both" }}>
+        <Btn onClick={onStart}>Let's go →</Btn>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────
 
 export default function PourDecisions() {
-  const [step, setStep] = useState(1);
+  // step: "splash" | "intro" | 1 | 2 | 3 | 4
+  const [step, setStep] = useState("splash");
   const [menu, setMenu] = useState(null);
   const [peopleData, setPeopleData] = useState(null);
   const [results, setResults] = useState([]);
@@ -1191,32 +1206,20 @@ export default function PourDecisions() {
     setLoading(true);
     setError(null);
     setStep(4);
-
     try {
       const res = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menu,
-          peopleData,
-          vibeData,
-        }),
+        body: JSON.stringify({ menu, peopleData, vibeData }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate recommendations");
-      }
-
-      // Merge photo previews from people into results (AI can't return photos)
+      if (!res.ok) throw new Error(data.error || "Failed to generate recommendations");
       const enriched = data.results.map((r, i) => {
         const person = peopleData?.people?.[i];
         return { ...r, photoPreview: person?.photoPreview || "" };
       });
       setResults(enriched);
     } catch (err) {
-      console.error("Error:", err);
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -1224,7 +1227,7 @@ export default function PourDecisions() {
   };
 
   const restart = () => {
-    setStep(1);
+    setStep("splash");
     setMenu(null);
     setPeopleData(null);
     setResults([]);
@@ -1232,60 +1235,33 @@ export default function PourDecisions() {
     setLoading(false);
   };
 
+  // Splash screen
+  if (step === "splash") return <SplashScreen onDone={() => setStep("intro")} />;
+
+  // Intro screen
+  if (step === "intro") return <IntroScreen onStart={() => setStep(1)} />;
+
+  // Steps 1-4: show header + step indicator
+  const stepNum = typeof step === "number" ? step : 1;
+
   return (
-    <div
-      style={{
-        background: C.bg,
-        minHeight: "100vh",
-        fontFamily: sans,
-        color: "#fff",
-        maxWidth: 480,
-        margin: "0 auto",
-      }}
-    >
-      <div style={{ padding: "32px 20px 8px", textAlign: "center" }}>
-        <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 8 }}>🍹</div>
-        <div
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-            background: `linear-gradient(135deg,${C.accent} 0%,${C.gold} 50%,${C.cyan} 100%)`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            margin: "0 0 4px",
-            fontFamily: display,
-          }}
-        >
-          Pour Decisions
-        </div>
-        <div
-          style={{
-            fontSize: 13,
-            color: C.dim,
-            letterSpacing: "0.06em",
-            fontFamily: sans,
-            fontWeight: 500,
-            textTransform: "uppercase",
-          }}
-        >
-          Bartender AI
-        </div>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: sans, color: "#fff", maxWidth: 480, margin: "0 auto" }}>
+      <div style={{ padding: "28px 20px 4px", textAlign: "center" }}>
+        <div style={{
+          fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em",
+          background: `linear-gradient(135deg,${C.accent} 0%,${C.gold} 50%,${C.cyan} 100%)`,
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          margin: "0 0 2px", fontFamily: display,
+        }}>Pour Decisions</div>
+
       </div>
 
-      {step < 4 && <StepIndicator step={step} />}
+      {stepNum < 4 && <StepIndicator step={stepNum} />}
 
-      {step === 1 && <MenuStep onNext={(d) => { setMenu(d); setStep(2); }} />}
-      {step === 2 && (
-        <PeopleStep
-          onNext={(d) => { setPeopleData(d); setStep(3); }}
-          onBack={() => setStep(1)}
-        />
-      )}
+      {step === 1 && <MenuStep onNext={(d) => { setMenu(d); setStep(2); }} onBack={() => setStep("intro")} />}
+      {step === 2 && <PeopleStep onNext={(d) => { setPeopleData(d); setStep(3); }} onBack={() => setStep(1)} />}
       {step === 3 && <VibeStep onNext={generate} onBack={() => setStep(2)} />}
-      {step === 4 && (
-        <ResultsStep results={results} loading={loading} error={error} onRestart={restart} />
-      )}
+      {step === 4 && <ResultsStep results={results} loading={loading} error={error} onRestart={restart} />}
     </div>
   );
 }
