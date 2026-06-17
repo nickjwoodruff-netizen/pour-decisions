@@ -337,50 +337,28 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
             }} />
           </div>
         </div>
+      ) : p.photoAnalysis ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8, flex: 1,
+            background: `rgba(${hexRgb(C.cyan)},0.08)`,
+            border: `1px solid rgba(${hexRgb(C.cyan)},0.25)`,
+            borderRadius: 10, padding: "10px 12px",
+          }}>
+            {p.photoPreview && (
+              <img src={`data:image/jpeg;base64,${p.photoPreview}`} alt="person"
+                style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+            )}
+            <div>
+              <div style={{ fontSize: 11, color: C.cyan, fontWeight: 700, fontFamily: sans }}>✅ Photo added</div>
+              <div style={{ fontSize: 11, color: C.dim, fontFamily: body }}>Vibe revealed at results</div>
+            </div>
+          </div>
+          <PhotoUploadButton onPhoto={handlePhotoAnalysis} label="↩️" loading={false} />
+        </div>
       ) : (
         <div style={{ display: "flex", gap: 8 }}>
-          <PhotoUploadButton
-            onPhoto={handlePhotoAnalysis}
-            label={p.photoAnalysis ? "📷 Retake photo" : "📷 Add photo"}
-            loading={false}
-          />
-        </div>
-      )}
-
-      {!analyzing && p.photoAnalysis && (
-        <div
-          style={{
-            background: `rgba(${hexRgb(C.cyan)},0.1)`,
-            border: `1px solid rgba(${hexRgb(C.cyan)},0.3)`,
-            borderRadius: 10,
-            padding: 10,
-            fontSize: 12,
-            color: C.muted,
-            fontFamily: body,
-            lineHeight: 1.5,
-            display: "flex",
-            gap: 10,
-            alignItems: "flex-start",
-          }}
-        >
-          {p.photoPreview && (
-            <img
-              src={`data:image/jpeg;base64,${p.photoPreview}`}
-              alt="person"
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 10,
-                objectFit: "cover",
-                flexShrink: 0,
-                border: `1.5px solid rgba(${hexRgb(C.cyan)},0.4)`,
-              }}
-            />
-          )}
-          <div>
-            <div style={{ fontSize: 10, color: C.cyan, fontWeight: 700, marginBottom: 4 }}>FROM PHOTO</div>
-            {p.photoAnalysis}
-          </div>
+          <PhotoUploadButton onPhoto={handlePhotoAnalysis} label="📷 Add photo" loading={false} />
         </div>
       )}
 
@@ -920,7 +898,7 @@ function VibeStep({ onNext, onBack }) {
 
 // ─── Step 4: Results ──────────────────────────────────────────
 
-function ResultsStep({ results, loading, error, onRestart }) {
+function ResultsStep({ results, loading, error, onRestart, onBack }) {
   if (loading)
     return (
       <div
@@ -1116,10 +1094,9 @@ function ResultsStep({ results, loading, error, onRestart }) {
         })}
       </div>
 
-      <div style={{ marginTop: 36, textAlign: "center" }}>
-        <Btn variant="secondary" onClick={onRestart}>
-          🔄 Order again
-        </Btn>
+      <div style={{ marginTop: 36, display: "flex", gap: 12, justifyContent: "center" }}>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn variant="secondary" onClick={onRestart}>🔄 Order again</Btn>
       </div>
     </div>
   );
@@ -1261,7 +1238,7 @@ export default function PourDecisions() {
       {step === 1 && <MenuStep onNext={(d) => { setMenu(d); setStep(2); }} onBack={() => setStep("intro")} />}
       {step === 2 && <PeopleStep onNext={(d) => { setPeopleData(d); setStep(3); }} onBack={() => setStep(1)} />}
       {step === 3 && <VibeStep onNext={generate} onBack={() => setStep(2)} />}
-      {step === 4 && <ResultsStep results={results} loading={loading} error={error} onRestart={restart} />}
+      {step === 4 && <ResultsStep results={results} loading={loading} error={error} onRestart={restart} onBack={() => setStep(3)} />}
     </div>
   );
 }
