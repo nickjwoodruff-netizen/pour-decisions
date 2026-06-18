@@ -272,14 +272,15 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
   return (
     <div
       style={{
-        background: C.bgSoft,
-        border: `1px solid ${C.border}`,
+        background: "rgba(255,255,255,0.07)",
+        border: `2px solid rgba(255,255,255,0.22)`,
         borderRadius: 16,
         padding: 16,
         display: "flex",
         flexDirection: "column",
         gap: 12,
         transition: "all 0.3s",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -663,7 +664,6 @@ function GroupPhotoUploader({ onGroupAnalyzed }) {
 
 function PeopleStep({ onNext, onBack }) {
   const [people, setPeople] = useState([newPerson(1)]);
-  const [tone, setTone] = useState("witty");
   const [avoidMode, setAvoidMode] = useState("no");
   const [groupPhotoPreview, setGroupPhotoPreview] = useState(null);
   const [inputMode, setInputMode] = useState("manual");
@@ -684,13 +684,6 @@ function PeopleStep({ onNext, onBack }) {
     setPeople(newPeople);
     setInputMode("manual");
   };
-
-  const tones = [
-    { id: "witty", l: "😏 Witty", d: "Clever & charming" },
-    { id: "roast", l: "🔥 Roast", d: "Playful & spicy" },
-    { id: "dramatic", l: "🎭 Dramatic", d: "Over the top" },
-    { id: "kind", l: "💛 Kind", d: "Warm & wholesome" },
-  ];
 
   return (
     <div style={{ padding: "8px 20px 36px" }}>
@@ -781,7 +774,36 @@ function PeopleStep({ onNext, onBack }) {
         </div>
       </div>
 
-      <div style={{ marginTop: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn disabled={!canNext} onClick={() => onNext({ people, avoidMode })}>Next →</Btn>
+      </div>
+    </div>
+  );
+}
+// ─── Step 3: Vibe ─────────────────────────────────────────────
+
+function VibeStep({ onNext, onBack }) {
+  const [play, setPlay] = useState("fun");
+  const [tone, setTone] = useState("witty");
+
+  const tones = [
+    { id: "witty", l: "😏 Witty", d: "Clever & charming" },
+    { id: "roast", l: "🔥 Roast", d: "Playful & spicy" },
+    { id: "dramatic", l: "🎭 Dramatic", d: "Over the top" },
+    { id: "kind", l: "💛 Kind", d: "Warm & wholesome" },
+  ];
+
+  return (
+    <div style={{ padding: "8px 20px 36px" }}>
+      <h2 style={{ fontSize: 32, fontWeight: 700, margin: "20px 0 6px", fontFamily: display, letterSpacing: "-0.02em" }}>
+        Set the vibe ✨
+      </h2>
+      <p style={{ color: C.muted, margin: "0 0 28px", fontSize: 15, fontFamily: body }}>
+        Two quick questions.
+      </p>
+
+      <div style={{ marginBottom: 28 }}>
         <Lbl>Bartender vibe</Lbl>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {tones.map((t) => (
@@ -800,28 +822,6 @@ function PeopleStep({ onNext, onBack }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
-        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
-        <Btn disabled={!canNext} onClick={() => onNext({ people, tone, avoidMode })}>Next →</Btn>
-      </div>
-    </div>
-  );
-}
-// ─── Step 3: Vibe ─────────────────────────────────────────────
-
-function VibeStep({ onNext, onBack }) {
-  const [play, setPlay] = useState("fun");
-  const [time, setTime] = useState("few");
-
-  return (
-    <div style={{ padding: "8px 20px 36px" }}>
-      <h2 style={{ fontSize: 32, fontWeight: 700, margin: "20px 0 6px", fontFamily: display, letterSpacing: "-0.02em" }}>
-        Set the vibe ✨
-      </h2>
-      <p style={{ color: C.muted, margin: "0 0 28px", fontSize: 15, fontFamily: body }}>
-        Two quick questions.
-      </p>
-
       <div style={{ marginBottom: 28 }}>
         <Lbl>Playfulness level</Lbl>
         <div style={{ display: "flex", gap: 8 }}>
@@ -830,65 +830,23 @@ function VibeStep({ onNext, onBack }) {
             { id: "fun", l: "🎉 Fun" },
             { id: "wild", l: "🔥 Wild" },
           ].map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setPlay(p.id)}
-              style={{
-                flex: 1,
-                padding: "14px 6px",
-                borderRadius: 10,
-                border: `1.5px solid ${play === p.id ? C.gold : C.border}`,
-                background: play === p.id ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
-                color: play === p.id ? "#fff" : C.muted,
-                fontFamily: sans,
-                fontWeight: 500,
-                fontSize: 14,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
+            <button key={p.id} onClick={() => setPlay(p.id)} style={{
+              flex: 1, padding: "14px 6px", borderRadius: 10,
+              border: `1.5px solid ${play === p.id ? C.gold : C.border}`,
+              background: play === p.id ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
+              color: play === p.id ? "#fff" : C.muted,
+              fontFamily: sans, fontWeight: 500, fontSize: 14,
+              cursor: "pointer", transition: "all 0.2s",
+            }}>
               {p.l}
             </button>
           ))}
         </div>
       </div>
 
-      <div>
-        <Lbl>How long are you staying?</Lbl>
-        <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { id: "one", l: "1️⃣ One drink" },
-            { id: "few", l: "🔄 A few" },
-            { id: "night", l: "🌙 All night" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTime(t.id)}
-              style={{
-                flex: 1,
-                padding: "14px 6px",
-                borderRadius: 10,
-                border: `1.5px solid ${time === t.id ? C.purple : C.border}`,
-                background: time === t.id ? `rgba(${hexRgb(C.purple)},0.12)` : "transparent",
-                color: time === t.id ? "#fff" : C.muted,
-                fontFamily: sans,
-                fontWeight: 500,
-                fontSize: 13,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              {t.l}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 36 }}>
-        <Btn variant="secondary" onClick={onBack}>
-          ← Back
-        </Btn>
-        <Btn variant="gold" onClick={() => onNext({ play, time })}>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn variant="gold" onClick={() => onNext({ play, tone })}>
           🍹 Pour me a drink!
         </Btn>
       </div>
