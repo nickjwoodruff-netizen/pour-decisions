@@ -54,17 +54,10 @@ ${menuDesc}
 WHO'S DRINKING:
 ${groupDesc}
 
-DESCRIPTION TONE: ${toneMap[peopleData.tone] || toneMap.witty}
+DESCRIPTION TONE: ${toneMap[vibeData.tone] || toneMap.witty}
 
 GROUP VIBE:
 - Playfulness: ${vibeData.play}
-- Time staying: ${
-      vibeData.time === "one"
-        ? "just one drink"
-        : vibeData.time === "few"
-          ? "a few rounds"
-          : "all night long"
-    }
 ${peopleData.avoidMode === "everyone" ? "- Everyone wants something different from their last drink" : ""}
 
 For EACH PERSON provide:
