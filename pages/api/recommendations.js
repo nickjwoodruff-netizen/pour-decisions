@@ -23,9 +23,13 @@ export default async function handler(req, res) {
     };
 
     const menuDesc =
-      menu.mode === "type"
-        ? menu.text
-        : menu.extractedMenu || `Bar/venue URL: ${menu.url}`;
+      menu.mode === "url"
+        ? (menu.text || `Bar/venue URL: ${menu.url} — use web search to find their drinks menu`)
+        : menu.text;
+
+    if (!menuDesc || !menuDesc.trim()) {
+      return res.status(400).json({ error: "No menu text available — please rescan the menu photo." });
+    }
 
     const groupDesc = peopleData.people
       .map((p, i) => {
@@ -71,8 +75,8 @@ For EACH PERSON provide:
 RULES:
 - Strictly respect alcoholic/non-alcoholic preferences
 - Strictly avoid anything listed in "can't drink"
-- Only recommend drinks on the menu
-- Give each person a different drink where possible
+- CRITICAL: drinkName MUST be copied exactly as it appears in the MENU list above. Do not invent, rename, modify, or substitute any drink that is not explicitly listed in the MENU section. If you are unsure, re-read the MENU list and pick the closest exact match from it.
+- Give each person a different drink where possible, but only from the MENU list — never duplicate by inventing a similar-sounding drink
 
 Respond with ONLY a valid JSON array — no markdown, no extra text:
 [{"personName":"name or empty string","archetype":"descriptor only, no The prefix","description":"...","drinkName":"...","drinkEmoji":"🍹","whyChosen":"..."}]`;
