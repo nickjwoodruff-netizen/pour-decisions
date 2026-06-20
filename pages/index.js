@@ -462,7 +462,7 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
               transition: "all 0.2s",
             }}
           >
-            {p.surpriseMe ? "✅" : "🎲"} Surprise me — bartender chooses
+            {p.surpriseMe ? "✅" : "🎲"} Surprise me, bartender chooses
           </button>
         </div>
       )}
@@ -795,7 +795,7 @@ function PeopleStep({ onNext, onBack }) {
                 style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }} />
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.purple, fontFamily: sans }}>✅ Group photo scanned</div>
-                <div style={{ fontSize: 11, color: C.dim, fontFamily: body }}>{people.length} people detected — vibes revealed at results</div>
+                <div style={{ fontSize: 11, color: C.dim, fontFamily: body }}>{people.length} people detected, vibes revealed at results</div>
               </div>
             </div>
           )}
