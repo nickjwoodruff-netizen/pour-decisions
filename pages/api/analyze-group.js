@@ -41,8 +41,8 @@ export default async function handler(req, res) {
                 type: "text",
                 text: `Look at this group photo and identify each person in it.
 
-For each person, provide:
-1. A fun, witty name based on WHERE they are in the photo and how they look. Be creative and playful — like a cheeky friend describing the photo. Examples of the style:
+For each person, provide (never use em dashes "—" anywhere in your response; use commas or periods instead):
+1. A fun, witty name based on WHERE they are in the photo and how they look. Be creative and playful, like a cheeky friend describing the photo. Examples of the style:
    - "The queen holding court dead centre"
    - "The guy barely surviving on the left edge"
    - "The one getting slowly crushed in the middle"
@@ -50,13 +50,13 @@ For each person, provide:
    - "The one who clearly organised this whole thing"
    - "The legend squeezed in on the right"
 
-2. A brief 1-sentence vibe/personality read based on their expression, style and energy — as if you're a bartender sizing them up.
+2. A brief 1-sentence vibe/personality read based on their expression, style and energy, as if you're a bartender sizing them up.
 
 Return ONLY valid JSON, no markdown, no extra text:
 [
   {
     "funName": "The queen holding court dead centre",
-    "vibe": "Radiates effortless confidence — the kind who orders something surprising and it turns out to be perfect."
+    "vibe": "Radiates effortless confidence, the kind who orders something surprising and it turns out to be perfect."
   }
 ]
 
