@@ -16,19 +16,19 @@ export default async function handler(req, res) {
 
   try {
     const toneMap = {
-      witty: "witty and charming — clever observations with a knowing twinkle",
-      roast: "gently roasting — playful and spicy, like a best friend who earned the right",
-      dramatic: "gloriously over-the-top theatrical — Shakespearean narrator meets Vegas compère",
-      kind: "warm, generous and affirming — seeing only the best in everyone",
+      witty: "witty and charming, clever observations with a knowing twinkle",
+      roast: "gently roasting, playful and spicy, like a best friend who earned the right",
+      dramatic: "gloriously over-the-top theatrical, Shakespearean narrator meets Vegas compere",
+      kind: "warm, generous and affirming, seeing only the best in everyone",
     };
 
     const menuDesc =
       menu.mode === "url"
-        ? (menu.text || `Bar/venue URL: ${menu.url} — use web search to find their drinks menu`)
+        ? (menu.text || `Bar/venue URL: ${menu.url}. Use web search to find their drinks menu`)
         : menu.text;
 
     if (!menuDesc || !menuDesc.trim()) {
-      return res.status(400).json({ error: "No menu text available — please rescan the menu photo." });
+      return res.status(400).json({ error: "No menu text available. Please rescan the menu photo." });
     }
 
     const groupDesc = peopleData.people
@@ -37,16 +37,16 @@ export default async function handler(req, res) {
         const lines = [`- ${name}`];
         if (p.description) lines.push(`  Vibe: ${p.description}`);
         if (p.photoAnalysis) lines.push(`  From photo: ${p.photoAnalysis}`);
-        lines.push(`  Alcohol: ${p.alcoholic ? "yes" : "no — non-alcoholic drinks only"}`);
+        lines.push(`  Alcohol: ${p.alcoholic ? "yes" : "no, non-alcoholic drinks only"}`);
         if (p.caffeineFree) lines.push(`  No caffeine`);
         if (p.cantDrink) lines.push(`  Can't drink: ${p.cantDrink}`);
-        if (p.surpriseMe) lines.push(`  Preference: surprise me — bartender's choice, be creative`);
+        if (p.surpriseMe) lines.push(`  Preference: surprise me, bartender's choice, be creative`);
         else if (p.prefers) lines.push(`  Prefers: ${p.prefers}`);
         if (peopleData.avoidMode === "everyone")
           lines.push(`  Avoid last drink: yes`);
         if (peopleData.avoidMode === "individual" && p.lastDrink) {
           lines.push(
-            `  Last drink: ${p.lastDrink} — ${p.avoidLast ? "please avoid" : "happy to have again"}`
+            `  Last drink: ${p.lastDrink}. ${p.avoidLast ? "please avoid" : "happy to have again"}`
           );
         }
         return lines.join("\n");
@@ -76,15 +76,16 @@ For EACH PERSON provide:
 6. 1–2 sentences on why it's perfect for them
 
 RULES:
+- NEVER use em dashes (—) anywhere in your response. Use commas, periods, or "and" instead.
 - Strictly respect alcoholic/non-alcoholic preferences
-- Strictly respect "no caffeine" — avoid coffee, espresso, cola, energy drinks, matcha, etc.
+- Strictly respect "no caffeine": avoid coffee, espresso, cola, energy drinks, matcha, etc.
 - Strictly avoid anything listed in "can't drink"
 - If "Prefers" is given, lean into that preference when picking the drink
 - If "surprise me" is given, have fun and be extra creative with the choice
 - CRITICAL: drinkName MUST be copied exactly as it appears in the MENU list above. Do not invent, rename, modify, or substitute any drink that is not explicitly listed in the MENU section. If you are unsure, re-read the MENU list and pick the closest exact match from it.
-- Give each person a different drink where possible, but only from the MENU list — never duplicate by inventing a similar-sounding drink
+- Give each person a different drink where possible, but only from the MENU list. Never duplicate by inventing a similar-sounding drink
 
-Respond with ONLY a valid JSON array — no markdown, no extra text:
+Respond with ONLY a valid JSON array. No markdown, no extra text:
 [{"personName":"name or empty string","archetype":"descriptor only, no The prefix","description":"...","drinkName":"...","drinkEmoji":"🍹","whyChosen":"..."}]`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
