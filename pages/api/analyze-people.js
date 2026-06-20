@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { imageBase64 } = req.body;
+  const { imageBase64, mediaType = "image/jpeg" } = req.body;
 
   if (!imageBase64) {
     return res.status(400).json({ error: "No image provided" });
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: "image/jpeg",
+                  media_type: mediaType,
                   data: imageBase64,
                 },
               },
@@ -48,7 +48,7 @@ Focus on:
 
 Keep it friendly and observational, not judgmental. For multiple people, describe each briefly.
 
-Return ONLY the description(s), nothing else.`,
+Return ONLY the description(s), nothing else. Never use em dashes (—); use commas or periods instead.`,
               },
             ],
           },
