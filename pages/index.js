@@ -180,8 +180,15 @@ function PhotoUploadButton({ onPhoto, label = "📷 Upload photo", loading = fal
         canvas.width = width;
         canvas.height = height;
         canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
+        try {
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
+        } catch (e) {
+          // Canvas tainted or invalid - fall back to reading raw file
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve({ base64: ev.target.result.split(",")[1], mediaType: file.type || "image/jpeg" });
+          reader.readAsDataURL(file);
+        }
       };
       img.onerror = () => {
         const reader = new FileReader();
@@ -527,7 +534,13 @@ function MenuStep({ onNext, onBack }) {
       else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+      try {
+        resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+      } catch (e) {
+        const r2 = new FileReader();
+        r2.onload = (ev) => resolve({ base64: ev.target.result.split(",")[1], mediaType: file.type || "image/jpeg" });
+        r2.readAsDataURL(file);
+      }
     };
     img.onerror = () => {
       const r = new FileReader();
@@ -674,7 +687,13 @@ function GroupPhotoUploader({ onGroupAnalyzed }) {
       else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+      try {
+        resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
+      } catch (e) {
+        const r2 = new FileReader();
+        r2.onload = (ev) => resolve({ base64: ev.target.result.split(",")[1], mediaType: file.type || "image/jpeg" });
+        r2.readAsDataURL(file);
+      }
     };
     img.onerror = () => {
       const r = new FileReader();
@@ -1219,10 +1238,20 @@ export default function PourDecisions() {
     setError(null);
     setStep(4);
     try {
+      // Strip large base64 images out of the payload - the recommendations
+      // endpoint only needs text. Images are kept client-side for display.
+      const slimPeopleData = {
+        ...peopleData,
+        people: (peopleData?.people || []).map((p) => {
+          const { photoPreview, ...rest } = p;
+          return rest;
+        }),
+      };
+
       const res = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ menu, peopleData, vibeData }),
+        body: JSON.stringify({ menu, peopleData: slimPeopleData, vibeData }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate recommendations");
