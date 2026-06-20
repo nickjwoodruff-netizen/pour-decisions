@@ -394,6 +394,79 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
         style={inp()}
       />
 
+      <button
+        onClick={() => onChange("caffeineFree", !p.caffeineFree)}
+        style={{
+          alignSelf: "flex-start",
+          padding: "7px 14px",
+          borderRadius: 50,
+          border: `1.5px solid ${p.caffeineFree ? C.green : C.border}`,
+          background: p.caffeineFree ? `rgba(${hexRgb(C.green)},0.12)` : "transparent",
+          color: p.caffeineFree ? "#fff" : C.muted,
+          fontFamily: sans,
+          fontWeight: 500,
+          fontSize: 12,
+          cursor: "pointer",
+          transition: "all 0.2s",
+        }}
+      >
+        {p.caffeineFree ? "✅" : "☕"} No caffeine
+      </button>
+
+      {!p.showPrefers && !p.surpriseMe && (
+        <button
+          onClick={() => onChange("showPrefers", true)}
+          style={{
+            alignSelf: "flex-start",
+            background: "none",
+            border: "none",
+            color: C.cyan,
+            fontFamily: sans,
+            fontWeight: 500,
+            fontSize: 12,
+            cursor: "pointer",
+            padding: "4px 0",
+            textDecoration: "underline",
+          }}
+        >
+          + Add a preference
+        </button>
+      )}
+
+      {(p.showPrefers || p.surpriseMe) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {!p.surpriseMe && (
+            <input
+              value={p.prefers}
+              onChange={(e) => onChange("prefers", e.target.value)}
+              placeholder="Anything they'd love? (e.g. something fruity, loves gin)"
+              style={inp()}
+            />
+          )}
+          <button
+            onClick={() => {
+              onChange("surpriseMe", !p.surpriseMe);
+              if (!p.surpriseMe) onChange("prefers", "");
+            }}
+            style={{
+              alignSelf: "flex-start",
+              padding: "7px 14px",
+              borderRadius: 50,
+              border: `1.5px solid ${p.surpriseMe ? C.purple : C.border}`,
+              background: p.surpriseMe ? `rgba(${hexRgb(C.purple)},0.12)` : "transparent",
+              color: p.surpriseMe ? "#fff" : C.muted,
+              fontFamily: sans,
+              fontWeight: 500,
+              fontSize: 12,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {p.surpriseMe ? "✅" : "🎲"} Surprise me — bartender chooses
+          </button>
+        </div>
+      )}
+
       {showLastDrink && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
           <input
@@ -574,7 +647,11 @@ const newPerson = (id) => ({
   photoAnalysis: "",
   photoPreview: "",   // base64 jpeg for display in results
   alcoholic: true,
+  caffeineFree: false,
   cantDrink: "",
+  prefers: "",
+  surpriseMe: false,
+  showPrefers: false,
   lastDrink: "",
   avoidLast: false,
 });
