@@ -1226,6 +1226,7 @@ export default function PourDecisions() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate recommendations");
+      if (!Array.isArray(data.results)) throw new Error("Unexpected response from the bartender. Please try again.");
       const enriched = data.results.map((r, i) => {
         const person = peopleData?.people?.[i];
         return { ...r, photoPreview: person?.photoPreview || "" };
