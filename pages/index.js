@@ -1194,7 +1194,7 @@ function IntroScreen({ onStart }) {
         margin: "0 0 56px",
         animation: "fadeUp2 0.5s ease-out 0.45s both",
       }}>
-        We'll ask for a photo of your group and the drinks menu, then pair their vibe with their perfect drink.
+        We'll ask for the drinks menu and a photo of your group, then pair their vibe with their perfect drink.
       </p>
       <div style={{ animation: "fadeUp2 0.5s ease-out 0.6s both" }}>
         <Btn onClick={onStart}>Let's go →</Btn>
