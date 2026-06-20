@@ -122,16 +122,34 @@ Respond with ONLY a valid JSON array. No markdown, no extra text:
       .map((b) => b.text)
       .join("\n");
 
-    const match = txt.match(/\[[\s\S]*\]/);
+    // Strip markdown code fences if present
+    let cleaned = txt.trim();
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+
+    const match = cleaned.match(/\[[\s\S]*\]/);
     if (!match) {
-      console.error("No JSON found in response:", txt.slice(0, 300));
+      console.error("No JSON found in response:", txt.slice(0, 500));
       return res.status(500).json({
-        error:
-          "Could not parse drink recommendations. Please check your menu is clear.",
+        error: "Could not parse drink recommendations. Please try again.",
       });
     }
 
-    const results = JSON.parse(match[0]);
+    let results;
+    try {
+      results = JSON.parse(match[0]);
+    } catch (parseErr) {
+      console.error("JSON parse failed:", parseErr.message, "Raw:", match[0].slice(0, 500));
+      return res.status(500).json({
+        error: "The bartender's response got garbled. Please try again.",
+      });
+    }
+
+    if (!Array.isArray(results) || results.length === 0) {
+      return res.status(500).json({
+        error: "No recommendations were generated. Please try again.",
+      });
+    }
+
     return res.status(200).json({ results });
   } catch (err) {
     console.error("Error:", err);
