@@ -38,7 +38,10 @@ export default async function handler(req, res) {
         if (p.description) lines.push(`  Vibe: ${p.description}`);
         if (p.photoAnalysis) lines.push(`  From photo: ${p.photoAnalysis}`);
         lines.push(`  Alcohol: ${p.alcoholic ? "yes" : "no — non-alcoholic drinks only"}`);
+        if (p.caffeineFree) lines.push(`  No caffeine`);
         if (p.cantDrink) lines.push(`  Can't drink: ${p.cantDrink}`);
+        if (p.surpriseMe) lines.push(`  Preference: surprise me — bartender's choice, be creative`);
+        else if (p.prefers) lines.push(`  Prefers: ${p.prefers}`);
         if (peopleData.avoidMode === "everyone")
           lines.push(`  Avoid last drink: yes`);
         if (peopleData.avoidMode === "individual" && p.lastDrink) {
@@ -74,7 +77,10 @@ For EACH PERSON provide:
 
 RULES:
 - Strictly respect alcoholic/non-alcoholic preferences
+- Strictly respect "no caffeine" — avoid coffee, espresso, cola, energy drinks, matcha, etc.
 - Strictly avoid anything listed in "can't drink"
+- If "Prefers" is given, lean into that preference when picking the drink
+- If "surprise me" is given, have fun and be extra creative with the choice
 - CRITICAL: drinkName MUST be copied exactly as it appears in the MENU list above. Do not invent, rename, modify, or substitute any drink that is not explicitly listed in the MENU section. If you are unsure, re-read the MENU list and pick the closest exact match from it.
 - Give each person a different drink where possible, but only from the MENU list — never duplicate by inventing a similar-sounding drink
 
