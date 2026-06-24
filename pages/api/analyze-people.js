@@ -44,6 +44,7 @@ export default async function handler(req, res) {
 Focus on:
 - Their energy/personality vibe
 - Their style or aesthetic
+- Specific visible details worth mentioning (a leather jacket, bold glasses, a bright dress, a great hat, etc.). Calling out a concrete detail makes the read feel personal, so include one where you can.
 - What kind of drink person they seem like (creative? adventurous? chill? bold?)
 
 Keep it friendly and observational, not judgmental. For multiple people, describe each briefly.
