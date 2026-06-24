@@ -313,10 +313,26 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
         )}
       </div>
 
+      {p.funName && (
+        <div style={{
+          background: `rgba(${hexRgb(C.purple)},0.1)`,
+          border: `1px solid rgba(${hexRgb(C.purple)},0.3)`,
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontSize: 13,
+          color: C.text,
+          fontFamily: body,
+          fontStyle: "italic",
+          lineHeight: 1.4,
+        }}>
+          {p.funName}
+        </div>
+      )}
+
       <input
         value={p.name}
         onChange={(e) => onChange("name", e.target.value)}
-        placeholder="Name (optional)"
+        placeholder={p.funName ? "Add their name" : "Name (optional)"}
         style={inp()}
       />
 
@@ -656,6 +672,7 @@ function MenuStep({ onNext, onBack }) {
 const newPerson = (id) => ({
   id,
   name: "",
+  funName: "",        // AI positional description from group photo (read-only display)
   description: "",
   photoAnalysis: "",
   photoPreview: "",   // base64 jpeg for display in results
@@ -773,7 +790,7 @@ function PeopleStep({ onNext, onBack }) {
     setGroupPhotoPreview(base64);
     const newPeople = detectedPeople.map((dp, i) => ({
       ...newPerson(Date.now() + i),
-      name: dp.funName,
+      funName: dp.funName,
       photoAnalysis: dp.vibe,
       photoPreview: base64,
     }));
