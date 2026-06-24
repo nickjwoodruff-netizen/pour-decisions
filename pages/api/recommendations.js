@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     const groupDesc = peopleData.people
       .map((p, i) => {
-        const name = p.name || `Person ${i + 1}`;
+        const name = p.name || p.funName || `Person ${i + 1}`;
         const lines = [`- ${name}`];
         if (p.description) lines.push(`  Vibe: ${p.description}`);
         if (p.photoAnalysis) lines.push(`  From photo: ${p.photoAnalysis}`);
