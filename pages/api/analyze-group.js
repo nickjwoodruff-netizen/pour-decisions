@@ -50,7 +50,7 @@ For each person, provide (never use em dashes "—" anywhere in your response; u
    - "The one who clearly organised this whole thing"
    - "The legend squeezed in on the right"
 
-2. A brief 1-sentence vibe/personality read based on their expression, style and energy, as if you're a bartender sizing them up.
+2. A brief 1-sentence vibe/personality read based on their expression, style and energy, as if you're a bartender sizing them up. Where you can, call out a specific visible detail (a leather jacket, bold glasses, a bright dress, a great hat, etc.). Naming a concrete detail makes the read feel personal.
 
 Return ONLY valid JSON, no markdown, no extra text:
 [
