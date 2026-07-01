@@ -29,6 +29,54 @@ const body = "'Inter', sans-serif";
 
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(",");
 
+// ─── Share helpers ────────────────────────────────────────────
+
+// Loads html2canvas from CDN once, on demand. Returns the library.
+let _html2canvasPromise = null;
+function loadHtml2Canvas() {
+  if (typeof window !== "undefined" && window.html2canvas) return Promise.resolve(window.html2canvas);
+  if (_html2canvasPromise) return _html2canvasPromise;
+  _html2canvasPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = () => resolve(window.html2canvas);
+    s.onerror = () => reject(new Error("Could not load image library"));
+    document.head.appendChild(s);
+  });
+  return _html2canvasPromise;
+}
+
+// Renders a DOM node to a PNG blob, then shares (native sheet) or downloads it.
+async function shareCardNode(node, fileName) {
+  const html2canvas = await loadHtml2Canvas();
+  const canvas = await html2canvas(node, { backgroundColor: null, scale: 2, useCORS: true });
+  const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+  if (!blob) throw new Error("Could not create image");
+
+  const file = new File([blob], fileName, { type: "image/png" });
+
+  // Try native share sheet (mobile) with the image file
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: "Pour Decisions" });
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // user cancelled, do nothing
+      // otherwise fall through to download
+    }
+  }
+
+  // Fallback: download the PNG
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ─── Shared UI ────────────────────────────────────────────────
 
 function Btn({ children, onClick, variant = "primary", disabled = false }) {
@@ -976,7 +1024,113 @@ function VibeStep({ onNext, onBack }) {
 
 // ─── Step 4: Results ──────────────────────────────────────────
 
+// ─── Shareable Card (rendered off-screen, captured to PNG) ────
+
+function ShareCard({ r, accent, cardRef }) {
+  const a = accent;
+  const headline = r.personName ? `${r.personName}, the ${r.archetype}` : `The ${r.archetype}`;
+  return (
+    <div
+      ref={cardRef}
+      style={{
+        position: "absolute",
+        left: -9999,
+        top: 0,
+        width: 540,
+        height: 675,
+        boxSizing: "border-box",
+        background: `linear-gradient(160deg, ${C.bg} 0%, #170E22 55%, rgba(${hexRgb(a)},0.28) 100%)`,
+        padding: 44,
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: sans,
+        color: "#fff",
+        overflow: "hidden",
+      }}
+    >
+      {/* Header wordmark */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+        <span style={{ fontSize: 26 }}>🍹</span>
+        <span style={{
+          fontSize: 24, fontWeight: 800, fontFamily: display, letterSpacing: "-0.02em",
+          background: `linear-gradient(135deg,${C.accent} 0%,${C.gold} 50%,${C.cyan} 100%)`,
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        }}>Pour Decisions</span>
+      </div>
+
+      {/* Photo or drink emoji */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+        {r.photoPreview ? (
+          <img
+            src={`data:image/jpeg;base64,${r.photoPreview}`}
+            alt=""
+            style={{
+              width: 180, height: 180, borderRadius: 28, objectFit: "cover",
+              border: `3px solid rgba(${hexRgb(a)},0.7)`,
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: 120, lineHeight: 1 }}>{r.drinkEmoji || "🍹"}</div>
+        )}
+      </div>
+
+      {/* Name / archetype */}
+      <div style={{
+        fontSize: 26, fontWeight: 700, fontFamily: display, lineHeight: 1.25,
+        textAlign: "center", letterSpacing: "-0.01em", marginBottom: 18,
+      }}>
+        {headline}
+      </div>
+
+      {/* Drink */}
+      <div style={{
+        fontSize: 34, fontWeight: 800, color: a, fontFamily: sans,
+        textAlign: "center", letterSpacing: "0.01em", marginBottom: 18, lineHeight: 1.1,
+      }}>
+        {r.drinkEmoji || "🍹"} {r.drinkName}
+      </div>
+
+      {/* Description */}
+      {r.description && (
+        <div style={{
+          fontSize: 18, color: "#E8E2F5", fontFamily: body, lineHeight: 1.5,
+          textAlign: "center", fontStyle: "italic", fontWeight: 500,
+          marginTop: "auto",
+        }}>
+          "{r.description}"
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{
+        marginTop: r.description ? 28 : "auto", textAlign: "center",
+        fontSize: 13, color: C.dim, fontFamily: sans, letterSpacing: "0.08em",
+        textTransform: "uppercase", fontWeight: 600,
+      }}>
+        pour-decisions-amber.vercel.app
+      </div>
+    </div>
+  );
+}
+
 function ResultsStep({ results, loading, error, onRestart, onBack }) {
+  const cardRefs = useRef({});
+  const [sharingIndex, setSharingIndex] = useState(null);
+
+  const handleShare = async (i, name) => {
+    setSharingIndex(i);
+    try {
+      const node = cardRefs.current[i];
+      if (!node) throw new Error("Card not ready");
+      const safe = (name || "pour-decisions").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      await shareCardNode(node, `${safe}.png`);
+    } catch (err) {
+      alert("Could not create the share image. Please try again.");
+    } finally {
+      setSharingIndex(null);
+    }
+  };
+
   if (loading)
     return (
       <div
@@ -1167,6 +1321,31 @@ function ResultsStep({ results, loading, error, onRestart, onBack }) {
                   {r.whyChosen}
                 </p>
               </div>
+
+              <button
+                onClick={() => handleShare(i, r.personName || r.archetype)}
+                disabled={sharingIndex === i}
+                style={{
+                  marginTop: 14,
+                  width: "100%",
+                  padding: "11px 16px",
+                  borderRadius: 12,
+                  border: `1.5px solid rgba(${hexRgb(a)},0.5)`,
+                  background: `rgba(${hexRgb(a)},0.12)`,
+                  color: "#fff",
+                  fontFamily: sans,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: sharingIndex === i ? "not-allowed" : "pointer",
+                  opacity: sharingIndex === i ? 0.6 : 1,
+                  transition: "all 0.2s",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {sharingIndex === i ? "Creating image..." : "📸 Save / share card"}
+              </button>
+
+              <ShareCard r={r} accent={a} cardRef={(el) => (cardRefs.current[i] = el)} />
             </div>
           );
         })}
