@@ -533,38 +533,8 @@ function PersonCard({ p, index, showRemove, onChange, onRemove, showLastDrink, o
 // ─── Step 1: Menu ─────────────────────────────────────────────
 
 function MenuStep({ onNext, onBack }) {
-  const [mode, setMode] = useState("photo");
   const [text, setText] = useState("");
-  const [url, setUrl] = useState("");
   const [analyzingMenu, setAnalyzingMenu] = useState(false);
-
-  const compressImage = (file) => new Promise((resolve) => {
-    const img = new Image();
-    const url2 = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url2);
-      const canvas = document.createElement("canvas");
-      const MAX = 1024;
-      let { width, height } = img;
-      if (width > height && width > MAX) { height = (height * MAX) / width; width = MAX; }
-      else if (height > MAX) { width = (width * MAX) / height; height = MAX; }
-      canvas.width = width; canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      try {
-        resolve({ base64: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg" });
-      } catch (e) {
-        const r2 = new FileReader();
-        r2.onload = (ev) => resolve({ base64: ev.target.result.split(",")[1], mediaType: file.type || "image/jpeg" });
-        r2.readAsDataURL(file);
-      }
-    };
-    img.onerror = () => {
-      const r = new FileReader();
-      r.onload = (e) => resolve({ base64: e.target.result.split(",")[1], mediaType: "image/jpeg" });
-      r.readAsDataURL(file);
-    };
-    img.src = url2;
-  });
 
   const handleMenuPhoto = async (base64, mediaType = "image/jpeg") => {
     setAnalyzingMenu(true);
@@ -588,7 +558,7 @@ function MenuStep({ onNext, onBack }) {
     }
   };
 
-  const ok = mode === "photo" ? !!text.trim() : !!url.trim();
+  const ok = !!text.trim();
 
   const AnalyzingUI = () => (
     <div style={{
@@ -612,56 +582,38 @@ function MenuStep({ onNext, onBack }) {
         What's on the menu? 🍹
       </h2>
       <p style={{ color: C.muted, margin: "0 0 28px", fontSize: 15, fontFamily: body }}>
-        Tell us what drinks are available.
+        Snap a photo of the drinks menu and we'll read it for you.
       </p>
 
-      <Tabs opts={[{ v: "photo", l: "📸 Photo" }, { v: "url", l: "🔗 Link" }]} val={mode} onChange={setMode} />
-
-      {mode === "photo" && (
-        analyzingMenu ? <AnalyzingUI /> : (
-          text ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{
-                background: `rgba(${hexRgb(C.cyan)},0.08)`,
-                border: `1px solid rgba(${hexRgb(C.cyan)},0.3)`,
-                borderRadius: 12, padding: 14,
-              }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.cyan, fontFamily: sans, marginBottom: 8, letterSpacing: "0.1em" }}>✅ MENU SCANNED</div>
-                <div style={{ fontSize: 13, color: C.text, fontFamily: body, lineHeight: 1.6, maxHeight: 140, overflowY: "auto" }}>{text}</div>
-              </div>
-              <PhotoUploadButton onPhoto={handleMenuPhoto} label="📸 Rescan menu" loading={false} />
-            </div>
-          ) : (
+      {analyzingMenu ? <AnalyzingUI /> : (
+        text ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{
-              border: `2px dashed ${C.cyan}`, borderRadius: 14, padding: "36px 20px",
-              textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center",
+              background: `rgba(${hexRgb(C.cyan)},0.08)`,
+              border: `1px solid rgba(${hexRgb(C.cyan)},0.3)`,
+              borderRadius: 12, padding: 14,
             }}>
-              <div style={{ fontSize: 44 }}>📸</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", fontFamily: sans }}>Take a photo of the menu</div>
-              <div style={{ fontSize: 13, color: C.dim, fontFamily: body }}>We'll read it automatically</div>
-              <PhotoUploadButton onPhoto={handleMenuPhoto} label="📷 Choose photo" loading={false} />
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.cyan, fontFamily: sans, marginBottom: 8, letterSpacing: "0.1em" }}>✅ MENU SCANNED</div>
+              <div style={{ fontSize: 13, color: C.text, fontFamily: body, lineHeight: 1.6, maxHeight: 140, overflowY: "auto" }}>{text}</div>
             </div>
-          )
+            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📸 Rescan menu" loading={false} />
+          </div>
+        ) : (
+          <div style={{
+            border: `2px dashed ${C.cyan}`, borderRadius: 14, padding: "44px 20px",
+            textAlign: "center", display: "flex", flexDirection: "column", gap: 14, alignItems: "center",
+          }}>
+            <div style={{ fontSize: 48 }}>📸</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#fff", fontFamily: sans }}>Take a photo of the menu</div>
+            <div style={{ fontSize: 13, color: C.dim, fontFamily: body }}>We'll read it automatically</div>
+            <PhotoUploadButton onPhoto={handleMenuPhoto} label="📷 Choose photo" loading={false} />
+          </div>
         )
-      )}
-
-      {mode === "url" && (
-        <div>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://thebaronbroadway.com/drinks"
-            style={inp({ borderRadius: 50, padding: "14px 20px" })}
-          />
-          <p style={{ color: C.dim, fontSize: 12, margin: "10px 0 0", fontFamily: body }}>
-            We'll find the drinks menu from this link.
-          </p>
-        </div>
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
         <Btn variant="secondary" onClick={onBack}>← Back</Btn>
-        <Btn disabled={!ok} onClick={() => onNext({ mode, text, url })}>Next →</Btn>
+        <Btn disabled={!ok} onClick={() => onNext({ mode: "photo", text, url: "" })}>Next →</Btn>
       </div>
     </div>
   );
