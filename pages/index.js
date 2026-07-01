@@ -640,9 +640,13 @@ const newPerson = (id) => ({
 
 // ─── Group Photo Uploader ─────────────────────────────────────
 
-function GroupPhotoUploader({ onGroupAnalyzed }) {
+function GroupPhotoUploader({ onGroupAnalyzed, autoOpen }) {
   const fileInputRef = useRef(null);
   const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) fileInputRef.current?.click();
+  }, [autoOpen]);
 
   const compressImage = (file) => new Promise((resolve) => {
     const img = new Image();
@@ -801,7 +805,7 @@ function PeopleStep({ onNext, onBack }) {
       {/* Group photo uploader */}
       {route === "group" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <GroupPhotoUploader onGroupAnalyzed={handleGroupAnalyzed} />
+          <GroupPhotoUploader onGroupAnalyzed={handleGroupAnalyzed} autoOpen={true} />
           <button onClick={() => setRoute(null)} style={{
             alignSelf: "flex-start", background: "none", border: "none",
             color: C.dim, fontFamily: sans, fontSize: 13, cursor: "pointer",
