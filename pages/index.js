@@ -582,7 +582,7 @@ function MenuStep({ onNext, onBack }) {
         What's on the menu? 🍹
       </h2>
       <p style={{ color: C.muted, margin: "0 0 28px", fontSize: 15, fontFamily: body }}>
-        Snap a photo of the drinks menu and we'll read it for you.
+        Snap or upload a photo of the drinks menu and we'll read it for you.
       </p>
 
       {analyzingMenu ? <AnalyzingUI /> : (
@@ -728,10 +728,11 @@ function GroupPhotoUploader({ onGroupAnalyzed }) {
 }
 
 function PeopleStep({ onNext, onBack }) {
-  const [people, setPeople] = useState([newPerson(1)]);
+  const [people, setPeople] = useState([]);
   const [avoidMode, setAvoidMode] = useState("no");
   const [groupPhotoPreview, setGroupPhotoPreview] = useState(null);
-  const [inputMode, setInputMode] = useState("manual");
+  // route: null (not chosen yet) | "group" | "individual"
+  const [route, setRoute] = useState(null);
 
   const update = (id, field, value) =>
     setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
@@ -747,30 +748,72 @@ function PeopleStep({ onNext, onBack }) {
       photoPreview: base64,
     }));
     setPeople(newPeople);
-    setInputMode("manual");
+    setRoute("individual"); // show the resulting cards
   };
+
+  const chooseIndividual = () => {
+    if (people.length === 0) setPeople([newPerson(Date.now())]);
+    setRoute("individual");
+  };
+
+  const ChoiceBox = ({ emoji, title, subtitle, onClick }) => (
+    <button onClick={onClick} style={{
+      width: "100%", padding: "22px 16px", borderRadius: 16,
+      border: `1.5px dashed ${C.purple}`,
+      background: `rgba(${hexRgb(C.purple)},0.07)`,
+      color: "#fff", fontFamily: sans, cursor: "pointer",
+      textAlign: "center", transition: "all 0.2s",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+    }}>
+      <div style={{ fontSize: 32 }}>{emoji}</div>
+      <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>
+      <div style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}>{subtitle}</div>
+    </button>
+  );
 
   return (
     <div style={{ padding: "8px 20px 36px" }}>
       <h2 style={{ fontSize: 32, fontWeight: 700, margin: "20px 0 6px", fontFamily: display, letterSpacing: "-0.02em" }}>
         Who's drinking? 🥳
       </h2>
-      <p style={{ color: C.muted, margin: "0 0 20px", fontSize: 15, fontFamily: body }}>
-        Tell the bartender about each person.
+      <p style={{ color: C.muted, margin: "0 0 24px", fontSize: 15, fontFamily: body, lineHeight: 1.5 }}>
+        Add photos of the people ordering so the bartender can match them to the perfect drink.
       </p>
 
-      <Tabs
-        opts={[{ v: "manual", l: "👤 Add people" }, { v: "group", l: "👥 Group photo" }]}
-        val={inputMode}
-        onChange={setInputMode}
-        accent={C.purple}
-      />
-
-      {inputMode === "group" && (
-        <GroupPhotoUploader onGroupAnalyzed={handleGroupAnalyzed} />
+      {/* Step 1: choose a route */}
+      {route === null && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <ChoiceBox
+            emoji="👥"
+            title="Add group photo"
+            subtitle="One photo, we'll detect everyone"
+            onClick={() => setRoute("group")}
+          />
+          <ChoiceBox
+            emoji="👤"
+            title="Add individual photos"
+            subtitle="A separate photo per person"
+            onClick={chooseIndividual}
+          />
+        </div>
       )}
 
-      {inputMode === "manual" && (
+      {/* Group photo uploader */}
+      {route === "group" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <GroupPhotoUploader onGroupAnalyzed={handleGroupAnalyzed} />
+          <button onClick={() => setRoute(null)} style={{
+            alignSelf: "flex-start", background: "none", border: "none",
+            color: C.dim, fontFamily: sans, fontSize: 13, cursor: "pointer",
+            padding: "4px 0", textDecoration: "underline",
+          }}>
+            ← Choose a different way
+          </button>
+        </div>
+      )}
+
+      {/* Individual cards (also shown after a group photo is processed) */}
+      {route === "individual" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {groupPhotoPreview && (
             <div style={{
@@ -818,34 +861,42 @@ function PeopleStep({ onNext, onBack }) {
         </div>
       )}
 
-      <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
-        <Lbl>Avoid their last drink?</Lbl>
-        <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { v: "no", l: "🔁 No" },
-            { v: "everyone", l: "🚫 Yes, everyone" },
-            { v: "individual", l: "👤 Per person" },
-          ].map((o) => (
-            <button key={o.v} onClick={() => setAvoidMode(o.v)} style={{
-              flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12,
-              border: `1.5px solid ${avoidMode === o.v ? C.gold : C.border}`,
-              background: avoidMode === o.v ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
-              color: avoidMode === o.v ? "#fff" : C.muted,
-              fontFamily: sans, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
-            }}>
-              {o.l}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Avoid-last-drink + nav only show once a route is chosen */}
+      {route !== null && (
+        <>
+          <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
+            <Lbl>Avoid their last drink?</Lbl>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[
+                { v: "no", l: "🔁 No" },
+                { v: "everyone", l: "🚫 Yes, everyone" },
+                { v: "individual", l: "👤 Per person" },
+              ].map((o) => (
+                <button key={o.v} onClick={() => setAvoidMode(o.v)} style={{
+                  flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12,
+                  border: `1.5px solid ${avoidMode === o.v ? C.gold : C.border}`,
+                  background: avoidMode === o.v ? `rgba(${hexRgb(C.gold)},0.12)` : "transparent",
+                  color: avoidMode === o.v ? "#fff" : C.muted,
+                  fontFamily: sans, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+                }}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
         <Btn variant="secondary" onClick={onBack}>← Back</Btn>
-        <Btn disabled={!canNext} onClick={() => onNext({ people, avoidMode })}>Next →</Btn>
+        {route !== null && (
+          <Btn disabled={!canNext} onClick={() => onNext({ people, avoidMode })}>Next →</Btn>
+        )}
       </div>
     </div>
   );
 }
+
 // ─── Step 3: Vibe ─────────────────────────────────────────────
 
 function VibeStep({ onNext, onBack }) {
